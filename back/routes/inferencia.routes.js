@@ -53,4 +53,31 @@ router.get("/hechos_fallas", async (req, res) => {
   }
 });
 
+router.post("/newRule", async (req, res) => {
+  const { rule, code, content } = req.body;
+
+  console.log(rule, code, content);
+
+  try {
+    // 1️⃣ Insertar en fallas
+    await pool.query(`INSERT INTO fallas (id, descripcion) VALUES (?, ?)`, [
+      code,
+      content,
+    ]);
+
+    // 2️⃣ Insertar en hechos_fallas (relaciones con cada hecho)
+    for (const hechoId of rule) {
+      await pool.query(
+        `INSERT INTO hechos_fallas (id_hecho, id_falla) VALUES (?, ?)`,
+        [hechoId, code]
+      );
+    }
+
+    res.status(200).json({ message: "Regla guardada correctamente" });
+  } catch (error) {
+    console.error("Error guardando regla:", error);
+    res.status(500).json({ message: "Error al guardar la regla" });
+  }
+});
+
 export default router;

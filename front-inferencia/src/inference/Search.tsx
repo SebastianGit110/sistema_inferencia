@@ -15,11 +15,32 @@ export default function HomePage() {
   const [selectedClimate, setSelectedClimate] = useState("");
   const [selectedOccasion, setSelectedOccasion] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("");
-  const [recommendation, setRecommendation] = useState("");
+
+  const [recommendation, setRecommendation] = useState<string[]>([]);
+  const [recommendationCounter, setRecommendationCounter] = useState<
+    Record<string, number>
+  >({});
 
   const [hechos, setHechos] = useState<any[]>([]);
   const [fallas, setFallas] = useState<any[]>([]);
   const [hechosFallas, setHechosFallas] = useState<any[]>([]);
+
+  console.log(recommendationCounter);
+
+  const selectRecommendation = (option: string) => {
+    console.log("LA OPCION ", option);
+
+    setRecommendationCounter((prev) => ({
+      ...prev,
+      [option]: (prev[option] || 0) + 1,
+    }));
+
+    setRecommendation([]);
+
+    // setSelectedClimate("");
+    // setSelectedOccasion("");
+    // setSelectedStyle("");
+  };
 
   // 🔄 Cargar datos desde backend
   useEffect(() => {
@@ -87,23 +108,21 @@ export default function HomePage() {
       .map((h) => h.id);
 
     // 2️⃣ buscar una regla (falla) que esté asociada exactamente a esos 3 hechos
+
     for (const falla of fallas) {
       const hechosDeFalla = hechosFallas
         .filter(([idHecho, idFalla]) => idFalla === falla.id)
         .map(([idHecho]) => idHecho);
 
-      console.log("hechosDeFalla", hechosDeFalla);
-      console.log("idsHechos", idsHechos);
-
       if (hechosDeFalla.every((id) => idsHechos.includes(id))) {
         console.log(falla.descripcion);
-        setRecommendation(falla.descripcion);
-        return falla.descripcion;
+
+        setRecommendation((prev) => [...prev, falla.descripcion]);
       }
     }
-
-    return "No se encontró una recomendación para esa combinación.";
   };
+
+  console.log("RECOMENDACION", recommendation);
 
   return (
     <div className="min-h-screen bg-background">
@@ -248,35 +267,68 @@ export default function HomePage() {
             </button>
 
             {/* Resultado */}
-            {recommendation && (
-              <div className="rounded-lg border-2 border-accent/20 bg-accent/5 p-6">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent">
-                    <svg
-                      className="h-5 w-5 text-accent-foreground"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="mb-2 text-lg font-semibold text-foreground">
-                      Tu recomendación
-                    </h3>
-                    <p className="text-foreground/90 leading-relaxed">
-                      {recommendation}
-                    </p>
+            {recommendation.length > 0 &&
+              recommendation.map((elem, index) => (
+                <div
+                  key={index}
+                  className="
+                    rounded-lg 
+                    border-2 border-accent/20 
+                    bg-accent/5 
+                    p-6 
+                    transition 
+                    duration-250 
+                    hover:bg-accent/10 
+                    hover:border-accent 
+                    hover:shadow-lg 
+                    hover:scale-[1.02] 
+                    cursor-pointer"
+                  onClick={() => selectRecommendation(elem)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent">
+                      <svg
+                        className="h-5 w-5 text-accent-foreground"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="mb-2 text-lg font-semibold text-foreground">
+                        Recomendación {index + 1}
+                      </h3>
+                      <p className="text-foreground/90 leading-relaxed">
+                        {elem}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              ))}
+
+            <h3 className="mb-4 text-lg font-semibold text-foreground">
+              Opciones Seleccionadas
+            </h3>
+            <div className="rounded-lg border border-border bg-secondary/30 p-4 flex flex-col gap-2">
+              {Object.entries(recommendationCounter).map(([key, value]) => (
+                <div
+                  key={key}
+                  className="flex items-center justify-between rounded-lg border border-border bg-card px-5 py-4"
+                >
+                  <div className="flex items-center gap-3">{key}</div>
+                  <span className="text-lg font-bold text-primary">
+                    {value || 0}x
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </main>
