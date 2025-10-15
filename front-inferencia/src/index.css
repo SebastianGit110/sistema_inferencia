@@ -1,3 +1,56 @@
+/* === Base Tailwind setup (tu versión, 100% funcional) === */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* === Variables de color y tema (inspiradas en la versión de Sebastián) === */
+:root {
+  --background: oklch(0.99 0.005 106);
+  --foreground: oklch(0.15 0.01 280);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.01 280);
+  --primary: oklch(0.25 0.05 280);
+  --primary-foreground: oklch(0.99 0.005 106);
+  --secondary: oklch(0.95 0.01 280);
+  --secondary-foreground: oklch(0.25 0.05 280);
+  --muted: oklch(0.96 0.005 280);
+  --muted-foreground: oklch(0.5 0.02 280);
+  --accent: oklch(0.88 0.08 45);
+  --accent-foreground: oklch(0.15 0.01 280);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.99 0.005 106);
+  --border: oklch(0.9 0.01 280);
+  --input: oklch(0.9 0.01 280);
+  --ring: oklch(0.25 0.05 280);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: oklch(0.12 0.01 280);
+  --foreground: oklch(0.98 0.005 106);
+  --card: oklch(0.15 0.01 280);
+  --card-foreground: oklch(0.98 0.005 106);
+  --primary: oklch(0.88 0.08 45);
+  --primary-foreground: oklch(0.15 0.01 280);
+  --secondary: oklch(0.22 0.02 280);
+  --secondary-foreground: oklch(0.98 0.005 106);
+  --muted: oklch(0.22 0.02 280);
+  --muted-foreground: oklch(0.6 0.02 280);
+  --accent: oklch(0.88 0.08 45);
+  --accent-foreground: oklch(0.15 0.01 280);
+  --border: oklch(0.22 0.02 280);
+  --input: oklch(0.22 0.02 280);
+  --ring: oklch(0.88 0.08 45);
+}
+
+/* === Aplicar los colores === */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}

@@ -1,6 +1,6 @@
 // src/App.tsx
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -16,29 +16,37 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      <Route 
-        path="/" 
+      {/* Rutas protegidas */}
+      <Route
+        path="/"
         element={
           <ProtectedRoute>
             <HomePage />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/login" 
-        element={user ? <Navigate to="/" replace /> : <LoginPage />} 
+
+      {/* Rutas públicas */}
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/" replace /> : <LoginPage />}
       />
-      <Route 
-        path="/register" 
-        element={user ? <Navigate to="/" replace /> : <RegisterPage />} 
+      <Route
+        path="/register"
+        element={user ? <Navigate to="/" replace /> : <RegisterPage />}
       />
-      <Route 
-        path="*" 
+
+      {/* Outlet para compatibilidad con rutas anidadas */}
+      <Route path="/app/*" element={<Outlet />} />
+
+      {/* Página 404 */}
+      <Route
+        path="*"
         element={
           <div className="flex items-center justify-center h-screen">
             <h1 className="text-2xl">404 - Página no encontrada</h1>
           </div>
-        } 
+        }
       />
     </Routes>
   );
