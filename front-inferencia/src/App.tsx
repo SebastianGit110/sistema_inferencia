@@ -1,9 +1,57 @@
-import { useState } from "react";
+// src/App.tsx
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import HomePage from "./pages/HomePage";
 
-function App() {
-  const [count, setCount] = useState(0);
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
+};
 
-  return <>App apppp</>;
-}
+const AppRoutes: React.FC = () => {
+  const { user } = useAuth();
+
+  return (
+    <Routes>
+      <Route 
+        path="/" 
+        element={
+          <ProtectedRoute>
+            <HomePage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/login" 
+        element={user ? <Navigate to="/" replace /> : <LoginPage />} 
+      />
+      <Route 
+        path="/register" 
+        element={user ? <Navigate to="/" replace /> : <RegisterPage />} 
+      />
+      <Route 
+        path="*" 
+        element={
+          <div className="flex items-center justify-center h-screen">
+            <h1 className="text-2xl">404 - Página no encontrada</h1>
+          </div>
+        } 
+      />
+    </Routes>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </AuthProvider>
+  );
+};
 
 export default App;
