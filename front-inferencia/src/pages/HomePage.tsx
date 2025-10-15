@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { Avatar } from '@mui/material';
 
 // Material UI
 import {
@@ -35,7 +36,13 @@ import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import SaveAltIcon from '@mui/icons-material/SaveAlt';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import EventIcon from '@mui/icons-material/Event';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import CheckroomIcon from '@mui/icons-material/Checkroom';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+
+
 
 // Tipos
 interface Usuario {
@@ -58,6 +65,8 @@ interface AdminCounterCardProps {
   color: string;
   icon: React.ReactNode;
 }
+
+
 
 const AdminCounterCard: React.FC<AdminCounterCardProps> = ({ title, count, color, icon }) => (
   <Card
@@ -175,9 +184,6 @@ const HomePage: React.FC = () => {
             <Typography variant="h6" fontWeight="bold">
               Gestión de Usuarios
             </Typography>
-            <Button startIcon={<SaveAltIcon />} size="small">
-              Exportar
-            </Button>
           </Box>
 
           <TableContainer component={Box}>
@@ -303,37 +309,258 @@ const HomePage: React.FC = () => {
     </Box>
   );
 
-  const UserPanel = () => (
-    <Card
-      sx={{
-        background: 'linear-gradient(135deg, #4caf50 30%, #8bc34a 90%)',
-        p: 4,
-        borderRadius: 4,
-        boxShadow: 8,
-        color: 'white',
-        mt: 4,
-      }}
-    >
-      <Typography variant="h4" fontWeight="bold" sx={{ mb: 2 }}>
-        Consulta de Vestimenta
-      </Typography>
-      <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
-        Obtén recomendaciones personalizadas basadas en el clima, la ocasión y tu estilo personal
-      </Typography>
-      <Button
-        variant="contained"
-        size="large"
+const UserPanel = () => {
+  const navigate = useNavigate();
+
+  // Componente auxiliar para las características de la columna izquierda (FeatureItem)
+  const FeatureItem = ({ icon: Icon, title, description }) => (
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+      <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48, mt: 0.5 }}>
+        <Icon sx={{ color: 'white' }} />
+      </Avatar>
+      <Box sx={{ color: 'white' }}> {/* Asegura que el texto sea blanco */}
+        <Typography variant="subtitle1" fontWeight={600}>
+          {title}
+        </Typography>
+        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+          {description}
+        </Typography>
+      </Box>
+    </Box>
+  );
+
+  // Componente auxiliar para la tarjeta de consulta (ConsultCard)
+  const ConsultCardContent = () => {
+    const steps = [
+      { step: '1', title: 'Selecciona la ocasión', desc: 'Casual, formal, deportiva o de gala' },
+      { step: '2', title: 'Indica tus preferencias', desc: 'Colores, estilo y nivel de formalidad' },
+      { step: '3', title: 'Recibe tu recomendación', desc: 'Sugerencias inteligentes adaptadas a ti' },
+    ];
+
+    return (
+      <Card
         sx={{
+          p: { xs: 4, sm: 5 },
+          borderRadius: 4,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
           bgcolor: 'white',
-          color: '#4caf50',
-          fontWeight: 'bold',
-          '&:hover': { bgcolor: 'grey.50' },
+          position: 'relative',
+          overflow: 'hidden',
+          minWidth: 300,
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 6,
+            background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+          }
         }}
       >
-        Iniciar Consulta →
-      </Button>
-    </Card>
+        {/* Fondo decorativo */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: -100,
+            right: -100,
+            width: 300,
+            height: 300,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+            zIndex: 0,
+          }}
+        />
+
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
+          {/* Icono principal */}
+          <Box
+            sx={{
+              width: 80,
+              height: 80,
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 3,
+              boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)'
+            }}
+          >
+            <CheckroomIcon sx={{ fontSize: 40, color: 'white' }} />
+          </Box>
+
+          <Typography variant="h4" fontWeight="bold" sx={{ mb: 2, color: 'grey.900' }}>
+            Comienza Tu Consulta
+          </Typography>
+
+          <Typography variant="body1" sx={{ mb: 4, color: 'grey.600', lineHeight: 1.8 }}>
+            En solo 3 pasos obtendrás una recomendación profesional:
+          </Typography>
+
+          {/* Pasos */}
+          <Box sx={{ mb: 4 }}>
+            {steps.map(({ step, title, desc }) => (
+              <Box key={step} sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
+                <Avatar
+                  sx={{
+                    bgcolor: '#f0f4ff',
+                    color: '#667eea',
+                    width: 32,
+                    height: 32,
+                    fontSize: '0.9rem',
+                    fontWeight: 'bold',
+                    flexShrink: 0,
+                  }}
+                >
+                  {step}
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={600} color="grey.800">{title}</Typography>
+                  <Typography variant="caption" color="grey.600">{desc}</Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+
+          {/* Botón principal */}
+          <Button
+            variant="contained"
+            size="large"
+            fullWidth
+            endIcon={<ArrowForwardIcon />}
+            onClick={() => navigate('/search')}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              fontWeight: 700,
+              py: 2,
+              fontSize: 16,
+              borderRadius: 2,
+              textTransform: 'none',
+              boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
+              transition: 'all 0.3s',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
+                transform: 'translateY(-2px)',
+              }
+            }}
+          >
+            Iniciar Consulta Ahora
+          </Button>
+        </Box>
+      </Card>
+    );
+  };
+
+  return (
+    <Box
+      sx={{
+        minHeight: '85vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        px: 2,
+        py: { xs: 6, md: 4 }, // Ajuste de padding vertical para móviles
+      }}
+    >
+      <Container maxWidth="lg">
+        {/* Usamos Box con Flexbox para simular el Grid de 2 columnas */}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' }, // Columna en móvil, fila en escritorio
+            gap: { xs: 5, md: 8 }, // Espacio entre las secciones
+            alignItems: 'center',
+          }}
+        >
+
+          {/* Columna izquierda - Información */}
+          <Box
+            sx={{
+              color: 'white',
+              flex: 1, // Ocupa la mitad del espacio disponible
+              minWidth: 0,
+              pr: { md: 4 }
+            }}
+          >
+            <Typography
+              variant="overline"
+              sx={{
+                color: 'rgba(255,255,255,0.8)',
+                letterSpacing: 2,
+                fontWeight: 600,
+                mb: 2,
+                display: 'block'
+              }}
+            >
+              SISTEMA EXPERTO
+            </Typography>
+
+            <Typography
+              variant="h3"
+              component="h1"
+              sx={{
+                fontWeight: 800,
+                mb: 3,
+                lineHeight: 1.2
+              }}
+            >
+              Tu Asesor Personal de Vestimenta
+            </Typography>
+
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 4,
+                opacity: 0.95,
+                fontWeight: 300,
+                lineHeight: 1.7
+              }}
+            >
+              Tecnología inteligente que analiza el clima, la ocasión y tus preferencias
+              para ofrecerte recomendaciones precisas y personalizadas.
+            </Typography>
+
+            {/* Características destacadas - Usando Stack y el componente auxiliar */}
+            <Stack spacing={2.5}>
+              <FeatureItem
+                icon={CheckCircleIcon}
+                title="Análisis del Clima"
+                description="Recomendaciones adaptadas a la temperatura y condiciones actuales"
+              />
+              <FeatureItem
+                icon={AutoAwesomeIcon}
+                title="Personalización Inteligente"
+                description="Sistema experto que aprende de tus preferencias de estilo"
+              />
+              <FeatureItem
+                icon={EventIcon}
+                title="Múltiples Ocasiones"
+                description="Desde casual hasta formal, encuentras el outfit perfecto"
+              />
+            </Stack>
+          </Box>
+
+          {/* Columna derecha - Panel de consulta */}
+          <Box
+            sx={{
+              flex: 1, // Ocupa la otra mitad del espacio disponible
+              display: 'flex',
+              justifyContent: 'flex-end', // Alinea la tarjeta a la derecha si hay espacio
+              width: { xs: '100%', md: 'auto' }
+            }}
+          >
+            <ConsultCardContent />
+          </Box>
+
+        </Box>
+      </Container>
+    </Box>
   );
+};
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
