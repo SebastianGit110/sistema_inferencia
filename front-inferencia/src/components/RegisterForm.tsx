@@ -2,6 +2,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerUser } from "../api/authApi";
+import { 
+  Box, 
+  TextField, 
+  Button, 
+  Typography, 
+  Alert, 
+  CircularProgress 
+} from "@mui/material";
 
 const RegisterForm: React.FC = () => {
   const navigate = useNavigate();
@@ -28,74 +36,114 @@ const RegisterForm: React.FC = () => {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <form
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        backgroundColor: "#f5f5f5", // gris claro neutro
+        padding: 2,
+      }}
+    >
+      <Box
+        component="form"
         onSubmit={handleSubmit}
-        className="bg-white shadow-lg p-8 rounded-xl w-96"
+        sx={{
+          backgroundColor: "white",
+          padding: 5,
+          borderRadius: 3,
+          boxShadow: 4,
+          width: "100%",
+          maxWidth: 400,
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+        }}
       >
-        <h2 className="text-2xl font-semibold text-center mb-6">
+        <Typography
+          variant="h4"
+          component="h2"
+          align="center"
+          gutterBottom
+          fontWeight="bold"
+          sx={{ color: "#333" }}
+        >
           Crear Cuenta
-        </h2>
+        </Typography>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+          <Alert severity="error" sx={{ bgcolor: "#fdecea", color: "#611a15" }}>
             {error}
-          </div>
+          </Alert>
         )}
 
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Nombre</label>
-          <input
-            type="text"
-            placeholder="Tu nombre completo"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            required
-            className="border border-gray-300 p-3 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        <TextField
+          label="Nombre Completo"
+          type="text"
+          variant="outlined"
+          fullWidth
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          required
+        />
 
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Email</label>
-          <input
-            type="email"
-            placeholder="tu@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="border border-gray-300 p-3 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        <TextField
+          label="Correo Electrónico"
+          type="email"
+          variant="outlined"
+          fullWidth
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
 
-        <div className="mb-6">
-          <label className="block text-gray-700 mb-2">Contraseña</label>
-          <input
-            type="password"
-            placeholder="Mínimo 6 caracteres"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="border border-gray-300 p-3 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        <TextField
+          label="Contraseña"
+          type="password"
+          variant="outlined"
+          fullWidth
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          inputProps={{ minLength: 6 }}
+        />
 
-        <button
+        <Button
           type="submit"
+          variant="contained"
+          color="primary"
+          size="large"
+          fullWidth
           disabled={loading}
-          className="w-full bg-blue-600 text-white py-3 rounded hover:bg-blue-700 transition disabled:bg-gray-400"
+          sx={{
+            height: 50,
+            backgroundColor: "#607d8b",
+            "&:hover": { backgroundColor: "#455a64" },
+          }}
         >
-          {loading ? "Registrando..." : "Registrarse"}
-        </button>
+          {loading ? <CircularProgress size={24} color="inherit" /> : "Registrarse"}
+        </Button>
 
-        <p className="text-center text-sm mt-4 text-gray-600">
+        <Typography
+          variant="body2"
+          align="center"
+          sx={{ color: "#666", marginTop: 1 }}
+        >
           ¿Ya tienes cuenta?{" "}
-          <a href="/login" className="text-blue-600 hover:underline font-semibold">
+          <a
+            href="/login"
+            style={{
+              color: "#607d8b",
+              textDecoration: "none",
+              fontWeight: "bold",
+            }}
+          >
             Inicia sesión
           </a>
-        </p>
-      </form>
-    </div>
+        </Typography>
+      </Box>
+    </Box>
   );
 };
 
