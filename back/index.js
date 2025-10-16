@@ -24,6 +24,7 @@ app.use("/api", mainRouter);        // Rutas del sistema experto
 app.use("/api/auth", authRouter);   // Rutas de login y registro
 app.use('/api/users', userRoutes);
 app.use("/api/reglas", reglasRoutes);
+app.use("/", mainRouter);
 
 // 🔹 Ruta de prueba (opcional)
 app.get("/", (req, res) => {

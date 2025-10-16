@@ -5,6 +5,9 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import HomePage from "./pages/HomePage";
+import { Admin } from "./components/Admin";
+import Search from "./components/Search";
+
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -25,12 +28,20 @@ const AppRoutes: React.FC = () => {
         } 
       />
       <Route 
+        path="/search" 
+        element={ <Search/>} 
+      />
+      <Route 
+        path="/admin" 
+        element={ <Admin />} 
+      />
+      <Route 
         path="/login" 
-        element={user ? <Navigate to="/" replace /> : <LoginPage />} 
+        element={<LoginPage />} 
       />
       <Route 
         path="/register" 
-        element={user ? <Navigate to="/" replace /> : <RegisterPage />} 
+        element={<RegisterPage />} 
       />
       <Route 
         path="*" 
