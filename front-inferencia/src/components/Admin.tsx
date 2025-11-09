@@ -1,5 +1,19 @@
 import { useEffect, useState } from "react";
 import { getHechos, postRule } from "../api/index";
+import {
+  Box,
+  Typography,
+  Button,
+  TextField,
+  Paper,
+  Stack,
+  Card,
+  Chip,
+} from "@mui/material";
+import { useAuth } from "../context/AuthContext";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import ExitToAppIcon from "@mui/icons-material/ExitToApp";
+import { useNavigate } from "react-router-dom";
 
 type Option = {
   id: string;
@@ -11,6 +25,15 @@ function generarCodigo4Digitos(): number {
 }
 
 export function Admin() {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const primaryColor = "#607d8b";
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   const [climates, setClimates] = useState<Option[]>([]);
   const [occasions, setOccasions] = useState<Option[]>([]);
   const [styles, setStyles] = useState<Option[]>([]);
@@ -18,202 +41,189 @@ export function Admin() {
   const [selectedClimate, setSelectedClimate] = useState("");
   const [selectedOccasion, setSelectedOccasion] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("");
-
   const [newOptionName, setNewOptionName] = useState("");
 
   const createRule = async () => {
     try {
-      console.log("CLIMA", selectedClimate);
-      console.log("OCASION", selectedOccasion);
-      console.log("ESTILO", selectedStyle);
-
       const rule = [+selectedClimate, +selectedOccasion, +selectedStyle];
       const code = generarCodigo4Digitos();
-
-      console.log("REGLA", newOptionName, rule, code);
-
       await postRule({ rule, code, content: newOptionName });
+      setNewOptionName("");
     } catch (error) {
       console.log("ERROR AL CREAR REGLA", error);
     }
   };
 
-  // 🔄 Cargar datos desde backend
   useEffect(() => {
-    try {
-      const fetchData = async () => {
+    const fetchData = async () => {
+      try {
         const { data: hechosData } = await getHechos();
-
-        // Armar selects
         setClimates(
           hechosData
             .filter((item: any) => item.nombre === "clima")
-            .map((item: any) => ({
-              id: String(item.id),
-              name: item.valor,
-            }))
+            .map((item: any) => ({ id: String(item.id), name: item.valor }))
         );
-
         setOccasions(
           hechosData
             .filter((item: any) => item.nombre === "ocasión")
-            .map((item: any) => ({
-              id: String(item.id),
-              name: item.valor,
-            }))
+            .map((item: any) => ({ id: String(item.id), name: item.valor }))
         );
-
         setStyles(
           hechosData
             .filter((item: any) => item.nombre === "estilo")
-            .map((item: any) => ({
-              id: String(item.id),
-              name: item.valor,
-            }))
+            .map((item: any) => ({ id: String(item.id), name: item.valor }))
         );
-      };
-
-      fetchData();
-    } catch (error) {
-      console.log("ERROR", error);
-    }
+      } catch (error) {
+        console.log("ERROR", error);
+      }
+    };
+    fetchData();
   }, []);
 
+  const renderOptions = (
+    options: Option[],
+    selected: string,
+    setSelected: (id: string) => void
+  ) => (
+    <Stack direction="row" spacing={1} flexWrap="wrap">
+      {options.map((option) => (
+        <Button
+          key={option.id}
+          variant={selected === option.id ? "contained" : "outlined"}
+          onClick={() => setSelected(option.id)}
+          sx={{
+            m: 0.5,
+            textTransform: "none",
+            borderColor: primaryColor,
+            bgcolor: selected === option.id ? primaryColor : "white",
+            color: selected === option.id ? "white" : "#333",
+            "&:hover": {
+              bgcolor: selected === option.id ? "#455a64" : "#f0f4f8",
+              borderColor: "#455a64",
+            },
+          }}
+        >
+          {option.name}
+        </Button>
+      ))}
+    </Stack>
+  );
+
   return (
-    <div className="min-h-screen bg-background">
+    <Box sx={{ minHeight: "100vh", bgcolor: "#f5f5f5", p: 2 }}>
       {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-                <svg
-                  className="h-6 w-6 text-primary-foreground"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              </div>
-              <h1 className="text-2xl font-bold text-foreground">
-                Administra la Recomendación de Trajes
-              </h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Paper
+        elevation={2}
+        sx={{
+          p: 3,
+          mb: 4,
+          borderRadius: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        {/* Título a la izquierda */}
+        <Typography variant="h5" fontWeight="bold" color="#333">
+          Sistema de Recomendación de Trajes
+        </Typography>
+
+        {/* Usuario + botón a la derecha */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Chip
+            icon={<AccountCircleIcon />}
+            label={user?.nombre || "Usuario"}
+            variant="outlined"
+            size="medium"
+            sx={{ borderColor: primaryColor, color: primaryColor }}
+          />
+
+          <Button
+            color="inherit"
+            onClick={handleLogout}
+            startIcon={<ExitToAppIcon />}
+            sx={{ textTransform: "none", color: primaryColor }}
+          >
+            Salir
+          </Button>
+        </Box>
+      </Paper>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="bg-card rounded-xl border border-border p-8 shadow-sm">
-          <div className="space-y-8">
+      <Box maxWidth="lg" mx="auto" px={2}>
+        <Card
+          sx={{
+            p: 3,
+            mb: 6,
+            borderRadius: 3,
+            boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
+            bgcolor: "white",
+          }}
+        >
+          <Stack spacing={4}>
             {/* Clima */}
-            <div>
-              <label className="mb-3 block text-sm font-semibold text-foreground">
+            <Box>
+              <Typography variant="subtitle1" fontWeight="medium" mb={1}>
                 Clima
-              </label>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {climates.map((climate) => (
-                  <button
-                    key={climate.id}
-                    onClick={() => setSelectedClimate(climate.id)}
-                    className={`rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all ${
-                      selectedClimate === climate.id
-                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                        : "border-border bg-background text-foreground hover:border-primary/50 hover:bg-secondary"
-                    }`}
-                  >
-                    {climate.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+              </Typography>
+              {renderOptions(climates, selectedClimate, setSelectedClimate)}
+            </Box>
 
             {/* Ocasión */}
-            <div>
-              <label className="mb-3 block text-sm font-semibold text-foreground">
+            <Box>
+              <Typography variant="subtitle1" fontWeight="medium" mb={1}>
                 Ocasión
-              </label>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {occasions.map((occasion) => (
-                  <button
-                    key={occasion.id}
-                    onClick={() => setSelectedOccasion(occasion.id)}
-                    className={`rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all ${
-                      selectedOccasion === occasion.id
-                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                        : "border-border bg-background text-foreground hover:border-primary/50 hover:bg-secondary"
-                    }`}
-                  >
-                    {occasion.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+              </Typography>
+              {renderOptions(occasions, selectedOccasion, setSelectedOccasion)}
+            </Box>
 
             {/* Estilo */}
-            <div>
-              <label className="mb-3 block text-sm font-semibold text-foreground">
+            <Box>
+              <Typography variant="subtitle1" fontWeight="medium" mb={1}>
                 Estilo
-              </label>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {styles.map((style) => (
-                  <button
-                    key={style.id}
-                    onClick={() => setSelectedStyle(style.id)}
-                    className={`rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all ${
-                      selectedStyle === style.id
-                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                        : "border-border bg-background text-foreground hover:border-primary/50 hover:bg-secondary"
-                    }`}
-                  >
-                    {style.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+              </Typography>
+              {renderOptions(styles, selectedStyle, setSelectedStyle)}
+            </Box>
 
-            {/* Formulario para agregar */}
-            <div className="grid gap-8 lg:grid-cols-2">
-              <div className="bg-card rounded-xl border border-border p-6 shadow-sm col-span-full">
-                <h3 className="mb-4 text-xl font-semibold text-foreground">
-                  Agregar nueva regla
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="optionName"
-                      className="mb-2 block text-sm font-medium text-foreground"
-                    >
-                      Nombre de la opción
-                    </label>
-                    <input
-                      id="optionName"
-                      type="text"
-                      value={newOptionName}
-                      onChange={(e) => setNewOptionName(e.target.value)}
-                      placeholder={`Regla`}
-                      className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  <button
-                    onClick={createRule}
-                    className="w-full rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:bg-accent/90 hover:shadow-md"
-                  >
-                    Agregar Regla
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+            {/* Formulario para agregar regla */}
+            <Card
+              variant="outlined"
+              sx={{
+                p: 3,
+                borderRadius: 2,
+                borderColor: primaryColor,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+              }}
+            >
+              <Typography variant="h6" fontWeight="medium" mb={2}>
+                Agregar nueva regla
+              </Typography>
+              <Stack spacing={2}>
+                <TextField
+                  label="Nombre de la opción"
+                  value={newOptionName}
+                  onChange={(e) => setNewOptionName(e.target.value)}
+                  fullWidth
+                  variant="outlined"
+                />
+                <Button
+                  variant="contained"
+                  onClick={createRule}
+                  fullWidth
+                  sx={{
+                    bgcolor: primaryColor,
+                    color: "white",
+                    "&:hover": { bgcolor: "#455a64" },
+                    textTransform: "none",
+                  }}
+                >
+                  Agregar Regla
+                </Button>
+              </Stack>
+            </Card>
+          </Stack>
+        </Card>
+      </Box>
+    </Box>
   );
 }
