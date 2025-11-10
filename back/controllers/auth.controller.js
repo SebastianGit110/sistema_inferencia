@@ -1,16 +1,9 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import mysql from "mysql2/promise";
 import dotenv from "dotenv";
+import pool from "../db.js";
 
 dotenv.config();
-
-const pool = await mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
 
 // 🔹 Registro de usuario
 export const registrarUsuario = async (req, res) => {
@@ -27,7 +20,10 @@ export const registrarUsuario = async (req, res) => {
       [nombre, email, hashedPassword, rol || "usuario"]
     );
 
-    res.status(201).json({ mensaje: "Usuario registrado correctamente", id: result.insertId });
+    res.status(201).json({
+      mensaje: "Usuario registrado correctamente",
+      id: result.insertId,
+    });
   } catch (error) {
     console.error("❌ Error en registrarUsuario:", error);
     res.status(500).json({ mensaje: "Error en el servidor", error });
@@ -39,13 +35,17 @@ export const loginUsuario = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const [rows] = await pool.query("SELECT * FROM usuarios WHERE email = ?", [email]);
+    const [rows] = await pool.query("SELECT * FROM usuarios WHERE email = ?", [
+      email,
+    ]);
     const usuario = rows[0];
 
-    if (!usuario) return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    if (!usuario)
+      return res.status(404).json({ mensaje: "Usuario no encontrado" });
 
     const esValido = await bcrypt.compare(password, usuario.password);
-    if (!esValido) return res.status(401).json({ mensaje: "Contraseña incorrecta" });
+    if (!esValido)
+      return res.status(401).json({ mensaje: "Contraseña incorrecta" });
 
     const token = jwt.sign(
       { id: usuario.id, rol: usuario.rol },

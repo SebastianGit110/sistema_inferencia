@@ -1,18 +1,7 @@
 import express from "express";
-import mysql from "mysql2/promise";
-import dotenv from "dotenv";
-
-dotenv.config();
+import pool from "../db.js";
 
 const router = express.Router();
-
-// Crear pool de conexión
-export const pool = await mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: "sis_inferencia", // 👈 tu base de datos
-});
 
 // Ruta para obtener conteos por tipo de hecho
 router.get("/", async (req, res) => {
