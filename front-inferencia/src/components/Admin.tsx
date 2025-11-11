@@ -34,6 +34,7 @@ export function Admin() {
     navigate("/login");
   };
 
+  // ✅ Estados
   const [climates, setClimates] = useState<Option[]>([]);
   const [occasions, setOccasions] = useState<Option[]>([]);
   const [styles, setStyles] = useState<Option[]>([]);
@@ -43,6 +44,7 @@ export function Admin() {
   const [selectedStyle, setSelectedStyle] = useState("");
   const [newOptionName, setNewOptionName] = useState("");
 
+  // ✅ Crear regla
   const createRule = async () => {
     try {
       const rule = [+selectedClimate, +selectedOccasion, +selectedStyle];
@@ -54,6 +56,7 @@ export function Admin() {
     }
   };
 
+  // ✅ Obtener hechos (clima, ocasión, estilo)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -80,6 +83,7 @@ export function Admin() {
     fetchData();
   }, []);
 
+  // ✅ Renderizador de botones de opciones
   const renderOptions = (
     options: Option[],
     selected: string,
@@ -109,6 +113,21 @@ export function Admin() {
     </Stack>
   );
 
+  // ✅ Si no hay usuario logueado
+  if (!user) {
+    return (
+      <Box sx={{ p: 4, textAlign: "center" }}>
+        <Typography variant="h6" color="error">
+          Debes iniciar sesión para acceder
+        </Typography>
+      </Box>
+    );
+  }
+
+  // ✅ Lógica de roles
+  const isAdmin = user.rol_id === 1 || user.rol === "admin";
+  const isUsuario = user.rol_id === 2 || user.rol === "usuario";
+
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f5f5f5", p: 2 }}>
       {/* Header */}
@@ -123,21 +142,18 @@ export function Admin() {
           alignItems: "center",
         }}
       >
-        {/* Título a la izquierda */}
         <Typography variant="h5" fontWeight="bold" color="#333">
           Sistema de Recomendación de Trajes
         </Typography>
 
-        {/* Usuario + botón a la derecha */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Chip
             icon={<AccountCircleIcon />}
-            label={user?.nombre || "Usuario"}
+            label={`${user?.nombre} (${user?.rol || "Usuario"})`}
             variant="outlined"
             size="medium"
             sx={{ borderColor: primaryColor, color: primaryColor }}
           />
-
           <Button
             color="inherit"
             onClick={handleLogout}
@@ -149,81 +165,106 @@ export function Admin() {
         </Box>
       </Paper>
 
-      {/* Main Content */}
-      <Box maxWidth="lg" mx="auto" px={2}>
-        <Card
-          sx={{
-            p: 3,
-            mb: 6,
-            borderRadius: 3,
-            boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
-            bgcolor: "white",
-          }}
-        >
-          <Stack spacing={4}>
-            {/* Clima */}
-            <Box>
-              <Typography variant="subtitle1" fontWeight="medium" mb={1}>
-                Clima
-              </Typography>
-              {renderOptions(climates, selectedClimate, setSelectedClimate)}
-            </Box>
-
-            {/* Ocasión */}
-            <Box>
-              <Typography variant="subtitle1" fontWeight="medium" mb={1}>
-                Ocasión
-              </Typography>
-              {renderOptions(occasions, selectedOccasion, setSelectedOccasion)}
-            </Box>
-
-            {/* Estilo */}
-            <Box>
-              <Typography variant="subtitle1" fontWeight="medium" mb={1}>
-                Estilo
-              </Typography>
-              {renderOptions(styles, selectedStyle, setSelectedStyle)}
-            </Box>
-
-            {/* Formulario para agregar regla */}
+      {/* Render según rol */}
+      {isAdmin ? (
+        <>
+          {/* 🔹 PANEL DEL ADMIN */}
+          <Box maxWidth="lg" mx="auto" px={2}>
             <Card
-              variant="outlined"
               sx={{
                 p: 3,
-                borderRadius: 2,
-                borderColor: primaryColor,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                mb: 6,
+                borderRadius: 3,
+                boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
+                bgcolor: "white",
               }}
             >
-              <Typography variant="h6" fontWeight="medium" mb={2}>
-                Agregar nueva regla
-              </Typography>
-              <Stack spacing={2}>
-                <TextField
-                  label="Nombre de la opción"
-                  value={newOptionName}
-                  onChange={(e) => setNewOptionName(e.target.value)}
-                  fullWidth
+              <Stack spacing={4}>
+                {/* Clima */}
+                <Box>
+                  <Typography variant="subtitle1" fontWeight="medium" mb={1}>
+                    Clima
+                  </Typography>
+                  {renderOptions(climates, selectedClimate, setSelectedClimate)}
+                </Box>
+
+                {/* Ocasión */}
+                <Box>
+                  <Typography variant="subtitle1" fontWeight="medium" mb={1}>
+                    Ocasión
+                  </Typography>
+                  {renderOptions(
+                    occasions,
+                    selectedOccasion,
+                    setSelectedOccasion
+                  )}
+                </Box>
+
+                {/* Estilo */}
+                <Box>
+                  <Typography variant="subtitle1" fontWeight="medium" mb={1}>
+                    Estilo
+                  </Typography>
+                  {renderOptions(styles, selectedStyle, setSelectedStyle)}
+                </Box>
+
+                {/* Agregar regla */}
+                <Card
                   variant="outlined"
-                />
-                <Button
-                  variant="contained"
-                  onClick={createRule}
-                  fullWidth
                   sx={{
-                    bgcolor: primaryColor,
-                    color: "white",
-                    "&:hover": { bgcolor: "#455a64" },
-                    textTransform: "none",
+                    p: 3,
+                    borderRadius: 2,
+                    borderColor: primaryColor,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
                   }}
                 >
-                  Agregar Regla
-                </Button>
+                  <Typography variant="h6" fontWeight="medium" mb={2}>
+                    Agregar nueva regla
+                  </Typography>
+                  <Stack spacing={2}>
+                    <TextField
+                      label="Nombre de la opción"
+                      value={newOptionName}
+                      onChange={(e) => setNewOptionName(e.target.value)}
+                      fullWidth
+                      variant="outlined"
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={createRule}
+                      fullWidth
+                      sx={{
+                        bgcolor: primaryColor,
+                        color: "white",
+                        "&:hover": { bgcolor: "#455a64" },
+                        textTransform: "none",
+                      }}
+                    >
+                      Agregar Regla
+                    </Button>
+                  </Stack>
+                </Card>
               </Stack>
             </Card>
-          </Stack>
-        </Card>
-      </Box>
+          </Box>
+        </>
+      ) : isUsuario ? (
+        <>
+          {/* 🔹 PANEL DEL USUARIO NORMAL */}
+          <Box sx={{ textAlign: "center", mt: 10 }}>
+            <Typography variant="h5" color="primary" gutterBottom>
+              Bienvenido al sistema de recomendación
+            </Typography>
+            <Typography variant="body1" color="textSecondary">
+              Aquí podrás ver sugerencias de combinaciones de ropa basadas en tu clima, ocasión y estilo.
+            </Typography>
+          </Box>
+        </>
+      ) : (
+        <Typography textAlign="center" color="error" mt={4}>
+          Rol desconocido. Contacta al administrador.
+        </Typography>
+      )}
     </Box>
   );
 }

@@ -6,28 +6,9 @@ import { Avatar } from '@mui/material';
 
 // Material UI
 import {
-  Container,
-  Box,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  Button,
-  AppBar,
-  Toolbar,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  Paper,
-  Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Container, Box, Typography,
+  Grid, Card, CardContent, Button, AppBar, Toolbar,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Paper, Stack, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 
 // Iconos
@@ -41,8 +22,6 @@ import EventIcon from '@mui/icons-material/Event';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CheckroomIcon from '@mui/icons-material/Checkroom';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-
-
 
 // Tipos
 interface Usuario {
@@ -65,8 +44,6 @@ interface AdminCounterCardProps {
   color: string;
   icon: React.ReactNode;
 }
-
-
 
 const AdminCounterCard: React.FC<AdminCounterCardProps> = ({ title, count, color, icon }) => (
   <Card
@@ -113,17 +90,18 @@ const HomePage: React.FC = () => {
   const [open, setOpen] = useState(false);
 
   // === Cargar Usuarios ===
+  const fetchUsuarios = async () => {
+    try {
+      const response = await axios.get('http://localhost:3000/api/users');
+      setUsuarios(response.data);
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error);
+    }
+  };
+
   useEffect(() => {
-    const fetchUsuarios = async () => {
-      try {
-        const response = await axios.get('http://localhost:3000/api/users');
-        setUsuarios(response.data);
-      } catch (error) {
-        console.error('Error al cargar usuarios:', error);
-      }
-    };
     fetchUsuarios();
-  }, []);
+  }, []); // Carga inicial
 
   // === Cargar Reglas ===
   useEffect(() => {
@@ -143,13 +121,56 @@ const HomePage: React.FC = () => {
     setOpen(true);
   };
 
-  
-
   const handleClose = () => setOpen(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  // 🛠️ ACTUALIZACIÓN CLAVE: Cambiar rol y actualizar el estado
+  const handleChangeRole = async (id: number, newRole: string) => {
+    try {
+      await axios.put(`http://localhost:3000/api/users/${id}/rol`, { rol: newRole });
+      
+      // 1. Actualizar el rol en la lista local de usuarios (sin recargar)
+      setUsuarios((prev) =>
+        prev.map((u) =>
+          u.id === id ? { ...u, rol: newRole } : u
+        )
+      );
+
+      // 2. Actualizar el usuario seleccionado en el modal (si está abierto)
+      if (selectedUser && selectedUser.id === id) {
+          setSelectedUser(prev => ({ ...prev!, rol: newRole }));
+      }
+
+    } catch (error) {
+      console.error('Error al cambiar rol:', error);
+      // Opcional: Mostrar un mensaje de error al usuario
+    }
+  };
+
+  // 🛠️ ACTUALIZACIÓN CLAVE: Eliminar usuario y actualizar el estado
+  const handleDeleteUser = async (id?: number) => {
+    if (!id) return;
+    // La confirmación debe estar fuera del bloque try/catch para un flujo lógico
+    if (!window.confirm('¿Seguro que deseas eliminar este usuario?')) return; 
+
+    try {
+      await axios.delete(`http://localhost:3000/api/users/${id}`);
+      
+      // 1. Eliminar el usuario de la lista local de usuarios
+      setUsuarios((prev) => prev.filter((u) => u.id !== id));
+      
+      // 2. Cerrar el modal después de la eliminación exitosa
+      setOpen(false);
+      setSelectedUser(null); // Limpiar el usuario seleccionado
+
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+      // Opcional: Mostrar un mensaje de error al usuario
+    }
   };
 
   const totalReglas = reglas.clima + reglas.ocasion + reglas.estilo;
@@ -181,8 +202,19 @@ const HomePage: React.FC = () => {
 
       {/* Gestión de Usuarios */}
       <Grid container spacing={3}>
-        <Card component={Paper} elevation={3} sx={{ borderRadius: 2, p: 2, width: 800 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Card
+          component={Paper}
+          elevation={3}
+          sx={{ borderRadius: 2, p: 2, width: 800 }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
             <Typography variant="h6" fontWeight="bold">
               Gestión de Usuarios
             </Typography>
@@ -193,10 +225,10 @@ const HomePage: React.FC = () => {
               <TableHead>
                 <TableRow
                   sx={{
-                    '& th': {
-                      fontWeight: 'bold',
-                      color: 'text.secondary',
-                      backgroundColor: 'grey.50',
+                    "& th": {
+                      fontWeight: "bold",
+                      color: "text.secondary",
+                      backgroundColor: "grey.50",
                     },
                   }}
                 >
@@ -219,8 +251,8 @@ const HomePage: React.FC = () => {
                       <Chip
                         label={u.rol}
                         size="small"
-                        color={u.rol === 'admin' ? 'secondary' : 'default'}
-                        sx={{ fontWeight: 'medium' }}
+                        color={u.rol === "admin" ? "secondary" : "default"}
+                        sx={{ fontWeight: "medium" }}
                       />
                     </TableCell>
                     <TableCell>{u.fecha_creacion}</TableCell>
@@ -229,7 +261,7 @@ const HomePage: React.FC = () => {
                         size="small"
                         variant="text"
                         color="primary"
-                        onClick={() => handleOpen(u)} // 👈 abre modal
+                        onClick={() => handleOpen(u)} 
                       >
                         Ver detalles
                       </Button>
@@ -241,8 +273,12 @@ const HomePage: React.FC = () => {
           </TableContainer>
         </Card>
 
-        {/* Sistema Experto (panel lateral) */}
-        <Card component={Paper} elevation={8} sx={{ borderRadius: 2, p: 2, ml: 20, width: 350 }}>
+        {/* Panel lateral del sistema experto */}
+        <Card
+          component={Paper}
+          elevation={8}
+          sx={{ borderRadius: 2, p: 2, ml: 20, width: 350 }}
+        >
           <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>
             Sistema Experto
           </Typography>
@@ -252,17 +288,19 @@ const HomePage: React.FC = () => {
             fullWidth
             sx={{
               mb: 3,
-              backgroundColor: '#9c27b0',
-              '&:hover': { backgroundColor: '#7b1fa2' },
+              backgroundColor: "#9c27b0",
+              "&:hover": { backgroundColor: "#7b1fa2" },
             }}
-            onClick={() => { navigate("/admin") }}
+            onClick={() => {
+              navigate("/admin");
+            }}
           >
             + Agregar Nueva Regla
           </Button>
 
           {/* Panel de reglas */}
           <Stack spacing={2}>
-            <Card sx={{ borderLeft: '4px solid #2196f3', p: 1 }}>
+            <Card sx={{ borderLeft: "4px solid #2196f3", p: 1 }}>
               <Typography variant="body1" fontWeight="medium">
                 Reglas por Clima
               </Typography>
@@ -270,7 +308,7 @@ const HomePage: React.FC = () => {
                 {reglas.clima} reglas activas
               </Typography>
             </Card>
-            <Card sx={{ borderLeft: '4px solid #4caf50', p: 1 }}>
+            <Card sx={{ borderLeft: "4px solid #4caf50", p: 1 }}>
               <Typography variant="body1" fontWeight="medium">
                 Reglas por Ocasión
               </Typography>
@@ -278,7 +316,7 @@ const HomePage: React.FC = () => {
                 {reglas.ocasion} reglas activas
               </Typography>
             </Card>
-            <Card sx={{ borderLeft: '4px solid #ff9800', p: 1 }}>
+            <Card sx={{ borderLeft: "4px solid #ff9800", p: 1 }}>
               <Typography variant="body1" fontWeight="medium">
                 Reglas por Estilo
               </Typography>
@@ -290,21 +328,72 @@ const HomePage: React.FC = () => {
         </Card>
       </Grid>
 
-      {/* Modal Detalles Usuario */}
+      {/* 🔹 Modal ÚNICO: Detalles y acciones del usuario */}
       <Dialog open={open} onClose={handleClose} fullWidth>
         <DialogTitle>Detalles del Usuario</DialogTitle>
         <DialogContent dividers>
           {selectedUser && (
             <Box>
-              <Typography><strong>ID:</strong> {selectedUser.id}</Typography>
-              <Typography><strong>Nombre:</strong> {selectedUser.nombre}</Typography>
-              <Typography><strong>Email:</strong> {selectedUser.email}</Typography>
-              <Typography><strong>Rol:</strong> {selectedUser.rol}</Typography>
-              <Typography><strong>Fecha de creación:</strong> {selectedUser.fecha_creacion}</Typography>
+              <Typography>
+                <strong>ID:</strong> {selectedUser.id}
+              </Typography>
+              <Typography>
+                <strong>Nombre:</strong> {selectedUser.nombre}
+              </Typography>
+              <Typography>
+                <strong>Email:</strong> {selectedUser.email}
+              </Typography>
+              <Typography>
+                <strong>Rol actual:</strong> {selectedUser.rol}
+              </Typography>
+              <Typography>
+                <strong>Fecha de creación:</strong>{" "}
+                {selectedUser.fecha_creacion}
+              </Typography>
+
+              {/* Acciones */}
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Cambiar Rol:
+                </Typography>
+                <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                  <Button
+                    variant={
+                      selectedUser.rol === "admin" ? "contained" : "outlined"
+                    }
+                    color="secondary"
+                    onClick={() =>
+                      handleChangeRole(selectedUser.id, "admin")
+                    }
+                    disabled={selectedUser.rol === "admin"} // Deshabilita si ya es admin
+                  >
+                    Admin
+                  </Button>
+                  <Button
+                    variant={
+                      selectedUser.rol === "usuario" ? "contained" : "outlined"
+                    }
+                    color="primary"
+                    onClick={() =>
+                      handleChangeRole(selectedUser.id, "usuario")
+                    }
+                    disabled={selectedUser.rol === "usuario"} // Deshabilita si ya es usuario
+                  >
+                    Usuario
+                  </Button>
+                </Stack>
+              </Box>
             </Box>
           )}
         </DialogContent>
+
         <DialogActions>
+          <Button
+            color="error"
+            onClick={() => handleDeleteUser(selectedUser?.id)}
+          >
+            Eliminar Usuario
+          </Button>
           <Button onClick={handleClose}>Cerrar</Button>
         </DialogActions>
       </Dialog>
@@ -312,6 +401,7 @@ const HomePage: React.FC = () => {
   );
 
   const UserPanel = () => {
+    // ... (El código de UserPanel permanece igual)
     const navigate = useNavigate();
 
     // Componente auxiliar para las características de la columna izquierda (FeatureItem)
@@ -563,6 +653,8 @@ const HomePage: React.FC = () => {
       </Box>
     );
   };
+  
+  // ... (Resto del componente)
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
