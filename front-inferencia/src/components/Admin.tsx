@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getHechos, postRule } from "../api/index";
+import { getHechos, postRule, createHecho } from "../api/index";
 import {
   Box,
   Typography,
@@ -9,10 +9,16 @@ import {
   Stack,
   Card,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
 } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
+import AddIcon from "@mui/icons-material/Add";
 import { useNavigate } from "react-router-dom";
 
 type Option = {
@@ -44,6 +50,11 @@ export function Admin() {
   const [selectedStyle, setSelectedStyle] = useState("");
   const [newOptionName, setNewOptionName] = useState("");
 
+  // Estados para los modales
+  const [openModal, setOpenModal] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState<"clima" | "ocasión" | "estilo">("clima");
+  const [newCategoryOptionName, setNewCategoryOptionName] = useState("");
+
   // ✅ Crear regla
   const createRule = async () => {
     try {
@@ -51,8 +62,10 @@ export function Admin() {
       const code = generarCodigo4Digitos();
       await postRule({ rule, code, content: newOptionName });
       setNewOptionName("");
+      alert("Regla creada exitosamente");
     } catch (error) {
       console.log("ERROR AL CREAR REGLA", error);
+      alert("Error al crear la regla");
     }
   };
 
@@ -61,21 +74,7 @@ export function Admin() {
     const fetchData = async () => {
       try {
         const { data: hechosData } = await getHechos();
-        setClimates(
-          hechosData
-            .filter((item: any) => item.nombre === "clima")
-            .map((item: any) => ({ id: String(item.id), name: item.valor }))
-        );
-        setOccasions(
-          hechosData
-            .filter((item: any) => item.nombre === "ocasión")
-            .map((item: any) => ({ id: String(item.id), name: item.valor }))
-        );
-        setStyles(
-          hechosData
-            .filter((item: any) => item.nombre === "estilo")
-            .map((item: any) => ({ id: String(item.id), name: item.valor }))
-        );
+        updateOptions(hechosData);
       } catch (error) {
         console.log("ERROR", error);
       }
@@ -83,13 +82,69 @@ export function Admin() {
     fetchData();
   }, []);
 
-  // ✅ Renderizador de botones de opciones
+  // Función para actualizar las opciones
+  const updateOptions = (hechosData: any[]) => {
+    setClimates(
+      hechosData
+        .filter((item: any) => item.nombre === "clima")
+        .map((item: any) => ({ id: String(item.id), name: item.valor }))
+    );
+    setOccasions(
+      hechosData
+        .filter((item: any) => item.nombre === "ocasión")
+        .map((item: any) => ({ id: String(item.id), name: item.valor }))
+    );
+    setStyles(
+      hechosData
+        .filter((item: any) => item.nombre === "estilo")
+        .map((item: any) => ({ id: String(item.id), name: item.valor }))
+    );
+  };
+
+  // Función para abrir el modal
+  const handleOpenModal = (category: "clima" | "ocasión" | "estilo") => {
+    setCurrentCategory(category);
+    setNewCategoryOptionName("");
+    setOpenModal(true);
+  };
+
+  // Función para cerrar el modal
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setNewCategoryOptionName("");
+  };
+
+  // Función para guardar la nueva opción de categoría
+  const handleSaveNewCategoryOption = async () => {
+    if (!newCategoryOptionName.trim()) {
+      alert("Por favor ingresa un nombre válido");
+      return;
+    }
+
+    try {
+      // Insertar en la base de datos
+      await createHecho(currentCategory, newCategoryOptionName);
+      
+      // Recargar los datos para mostrar la nueva opción
+      const { data: hechosData } = await getHechos();
+      updateOptions(hechosData);
+
+      handleCloseModal();
+      alert(`${currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1)} agregado exitosamente`);
+    } catch (error) {
+      console.error("Error al guardar:", error);
+      alert("Error al guardar la nueva opción");
+    }
+  };
+
+  // ✅ Renderizador de botones de opciones con botón +
   const renderOptions = (
     options: Option[],
     selected: string,
-    setSelected: (id: string) => void
+    setSelected: (id: string) => void,
+    category: "clima" | "ocasión" | "estilo"
   ) => (
-    <Stack direction="row" spacing={1} flexWrap="wrap">
+    <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
       {options.map((option) => (
         <Button
           key={option.id}
@@ -110,6 +165,21 @@ export function Admin() {
           {option.name}
         </Button>
       ))}
+      
+      {/* Botón para agregar nueva opción */}
+      <IconButton
+        onClick={() => handleOpenModal(category)}
+        sx={{
+          m: 0.5,
+          color: primaryColor,
+          border: `1px solid ${primaryColor}`,
+          "&:hover": {
+            bgcolor: "#f0f4f8",
+          },
+        }}
+      >
+        <AddIcon />
+      </IconButton>
     </Stack>
   );
 
@@ -143,7 +213,7 @@ export function Admin() {
         }}
       >
         <Typography variant="h5" fontWeight="bold" color="#333">
-          Sistema de Recomendación de Trajes
+          Sistema de Recomendación de Trajes - Panel de Administración
         </Typography>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -185,7 +255,7 @@ export function Admin() {
                   <Typography variant="subtitle1" fontWeight="medium" mb={1}>
                     Clima
                   </Typography>
-                  {renderOptions(climates, selectedClimate, setSelectedClimate)}
+                  {renderOptions(climates, selectedClimate, setSelectedClimate, "clima")}
                 </Box>
 
                 {/* Ocasión */}
@@ -196,7 +266,8 @@ export function Admin() {
                   {renderOptions(
                     occasions,
                     selectedOccasion,
-                    setSelectedOccasion
+                    setSelectedOccasion,
+                    "ocasión"
                   )}
                 </Box>
 
@@ -205,7 +276,7 @@ export function Admin() {
                   <Typography variant="subtitle1" fontWeight="medium" mb={1}>
                     Estilo
                   </Typography>
-                  {renderOptions(styles, selectedStyle, setSelectedStyle)}
+                  {renderOptions(styles, selectedStyle, setSelectedStyle, "estilo")}
                 </Box>
 
                 {/* Agregar regla */}
@@ -219,29 +290,45 @@ export function Admin() {
                   }}
                 >
                   <Typography variant="h6" fontWeight="medium" mb={2}>
-                    Agregar nueva regla
+                    Crear Nueva Regla de Recomendación
                   </Typography>
                   <Stack spacing={2}>
+                    <Typography variant="body2" color="textSecondary" mb={1}>
+                      Selecciona una opción de cada categoría arriba y agrega la descripción de la recomendación
+                    </Typography>
                     <TextField
-                      label="Nombre de la opción"
+                      label="Descripción de la recomendación"
                       value={newOptionName}
                       onChange={(e) => setNewOptionName(e.target.value)}
                       fullWidth
                       variant="outlined"
+                      multiline
+                      rows={3}
+                      placeholder="Ejemplo: Traje formal oscuro con camisa blanca y corbata elegante..."
                     />
-                    <Button
-                      variant="contained"
-                      onClick={createRule}
-                      fullWidth
-                      sx={{
-                        bgcolor: primaryColor,
-                        color: "white",
-                        "&:hover": { bgcolor: "#455a64" },
-                        textTransform: "none",
-                      }}
-                    >
-                      Agregar Regla
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Typography variant="body2" sx={{ flex: 1 }}>
+                        <strong>Seleccionado:</strong><br />
+                        Clima: {climates.find(c => c.id === selectedClimate)?.name || 'Ninguno'}<br />
+                        Ocasión: {occasions.find(o => o.id === selectedOccasion)?.name || 'Ninguno'}<br />
+                        Estilo: {styles.find(s => s.id === selectedStyle)?.name || 'Ninguno'}
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        onClick={createRule}
+                        disabled={!selectedClimate || !selectedOccasion || !selectedStyle || !newOptionName.trim()}
+                        sx={{
+                          bgcolor: primaryColor,
+                          color: "white",
+                          "&:hover": { bgcolor: "#455a64" },
+                          textTransform: "none",
+                          minWidth: '150px',
+                          alignSelf: 'flex-end'
+                        }}
+                      >
+                        Crear Regla
+                      </Button>
+                    </Box>
                   </Stack>
                 </Card>
               </Stack>
@@ -265,6 +352,42 @@ export function Admin() {
           Rol desconocido. Contacta al administrador.
         </Typography>
       )}
+
+      {/* Modal para agregar nueva opción de categoría */}
+      <Dialog open={openModal} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Agregar nuevo {currentCategory}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label={`Nombre del ${currentCategory}`}
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newCategoryOptionName}
+            onChange={(e) => setNewCategoryOptionName(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleSaveNewCategoryOption();
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseModal} sx={{ color: "#666" }}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSaveNewCategoryOption} 
+            variant="contained"
+            sx={{ bgcolor: primaryColor, "&:hover": { bgcolor: "#455a64" } }}
+          >
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getFallas, getHechos, getHechosFallas } from "../api/index";
+import { getFallas, getHechos, getHechosFallas, createHecho } from "../api/index";
 import {
   Box,
   Typography,
@@ -9,8 +9,18 @@ import {
   Stack,
   Paper,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  IconButton,
 } from "@mui/material";
-import { ExitToApp as ExitToAppIcon, AccountCircle as AccountCircleIcon } from "@mui/icons-material";
+import { 
+  ExitToApp as ExitToAppIcon, 
+  AccountCircle as AccountCircleIcon,
+  Add as AddIcon 
+} from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 
 type Option = { id: string; name: string; };
@@ -43,6 +53,11 @@ export default function Search() {
   const [fallas, setFallas] = useState<any[]>([]);
   const [hechosFallas, setHechosFallas] = useState<any[]>([]);
 
+  // Estados para los modales
+  const [openModal, setOpenModal] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState<"clima" | "ocasión" | "estilo">("clima");
+  const [newOptionName, setNewOptionName] = useState("");
+
   console.log(recommendationCounter);
 
   const selectRecommendation = (option: string) => {
@@ -54,10 +69,6 @@ export default function Search() {
     }));
 
     setRecommendation([]);
-
-    // setSelectedClimate("");
-    // setSelectedOccasion("");
-    // setSelectedStyle("");
   };
 
   // 🔄 Cargar datos desde backend
@@ -140,14 +151,69 @@ export default function Search() {
     }
   };
 
-  console.log("RECOMENDACION", recommendation);
+  // Función para abrir el modal
+  const handleOpenModal = (category: "clima" | "ocasión" | "estilo") => {
+    setCurrentCategory(category);
+    setNewOptionName("");
+    setOpenModal(true);
+  };
+
+  // Función para cerrar el modal
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setNewOptionName("");
+  };
+
+  // Función para guardar la nueva opción
+  const handleSaveNewOption = async () => {
+    if (!newOptionName.trim()) {
+      alert("Por favor ingresa un nombre válido");
+      return;
+    }
+
+    try {
+      // Insertar en la base de datos
+      await createHecho(currentCategory, newOptionName);
+      
+      // Recargar los datos para mostrar la nueva opción
+      const { data: hechosData } = await getHechos();
+      setHechos(hechosData);
+
+      // Actualizar la lista correspondiente
+      const newOptions = hechosData
+        .filter((item: any) => item.nombre === currentCategory)
+        .map((item: any) => ({
+          id: String(item.id),
+          name: item.valor,
+        }));
+
+      switch (currentCategory) {
+        case "clima":
+          setClimates(newOptions);
+          break;
+        case "ocasión":
+          setOccasions(newOptions);
+          break;
+        case "estilo":
+          setStyles(newOptions);
+          break;
+      }
+
+      handleCloseModal();
+      alert(`${currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1)} agregado exitosamente`);
+    } catch (error) {
+      console.error("Error al guardar:", error);
+      alert("Error al guardar la nueva opción");
+    }
+  };
 
   const renderOptions = (
     options: Option[],
     selected: string,
-    setSelected: (id: string) => void
+    setSelected: (id: string) => void,
+    category: "clima" | "ocasión" | "estilo"
   ) => (
-    <Stack direction="row" spacing={1} flexWrap="wrap">
+    <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
       {options.map((option) => (
         <Button
           key={option.id}
@@ -168,13 +234,26 @@ export default function Search() {
           {option.name}
         </Button>
       ))}
+      
+      {/* Botón para agregar nueva opción */}
+      <IconButton
+        onClick={() => handleOpenModal(category)}
+        sx={{
+          m: 0.5,
+          color: primaryColor,
+          border: `1px solid ${primaryColor}`,
+          "&:hover": {
+            bgcolor: "#f0f4f8",
+          },
+        }}
+      >
+        <AddIcon />
+      </IconButton>
     </Stack>
   );
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f5f5f5" }}>
-
-
       {/* Main Content */}
       <Box sx={{ p: 2 }}>
         {/* Header */}
@@ -215,7 +294,6 @@ export default function Search() {
           </Box>
         </Paper>
 
-
         {/* Formulario y Resultados */}
         <Box maxWidth="lg" mx="auto" px={2}>
           <Box textAlign="center" mb={4}>
@@ -233,21 +311,21 @@ export default function Search() {
                 <Typography variant="subtitle1" fontWeight="medium" mb={1}>
                   Clima
                 </Typography>
-                {renderOptions(climates, selectedClimate, setSelectedClimate)}
+                {renderOptions(climates, selectedClimate, setSelectedClimate, "clima")}
               </Box>
 
               <Box>
                 <Typography variant="subtitle1" fontWeight="medium" mb={1}>
                   Ocasión
                 </Typography>
-                {renderOptions(occasions, selectedOccasion, setSelectedOccasion)}
+                {renderOptions(occasions, selectedOccasion, setSelectedOccasion, "ocasión")}
               </Box>
 
               <Box>
                 <Typography variant="subtitle1" fontWeight="medium" mb={1}>
                   Estilo
                 </Typography>
-                {renderOptions(styles, selectedStyle, setSelectedStyle)}
+                {renderOptions(styles, selectedStyle, setSelectedStyle, "estilo")}
               </Box>
 
               <Button
@@ -350,6 +428,42 @@ export default function Search() {
           </Card>
         </Box>
       </Box>
+
+      {/* Modal para agregar nueva opción */}
+      <Dialog open={openModal} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Agregar nuevo {currentCategory}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label={`Nombre del ${currentCategory}`}
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newOptionName}
+            onChange={(e) => setNewOptionName(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleSaveNewOption();
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseModal} sx={{ color: "#666" }}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSaveNewOption} 
+            variant="contained"
+            sx={{ bgcolor: primaryColor, "&:hover": { bgcolor: "#455a64" } }}
+          >
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

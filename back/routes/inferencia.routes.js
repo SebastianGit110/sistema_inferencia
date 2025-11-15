@@ -80,4 +80,24 @@ router.post("/newRule", async (req, res) => {
   }
 });
 
+// En tu archivo de rutas del backend
+router.post("/hechos", async (req, res) => {
+  const { nombre, valor_posible } = req.body;
+
+  try {
+    const [result] = await pool.query(
+      "INSERT INTO hechos (nombre, valor_posible) VALUES (?, ?)",
+      [nombre, valor_posible]
+    );
+    
+    res.status(201).json({ 
+      message: "Hecho creado exitosamente", 
+      id: result.insertId 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al crear el hecho" });
+  }
+});
+
 export default router;
