@@ -1,0 +1,77 @@
+Tengo estas tablas y quiero que me ayudes a crear una tabla llamada preferencias que quiero que guarde campos como el id de los hechos que en este caso estoy guardando por tipos en nombre (clima, ocasion, estilo) y el valor si puede ser cualquiera entonces tendria 3 opciones y tambien quiero guardar la falla y tambien una ponderacion, como me recomiendas una tabla para eso
+
+CREATE TABLE `fallas` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `descripcion` text NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7027 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `hechos_fallas` (
+  `id_hecho` int(11) NOT NULL,
+  `id_falla` int(11) NOT NULL,
+  PRIMARY KEY (`id_hecho`,`id_falla`),
+  KEY `id_falla` (`id_falla`),
+  CONSTRAINT `hechos_fallas_ibfk_1` FOREIGN KEY (`id_hecho`) REFERENCES `hechos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `hechos_fallas_ibfk_2` FOREIGN KEY (`id_falla`) REFERENCES `fallas` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `hechos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(50) NOT NULL,
+  `valor_posible` varchar(50) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `roles` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(50) NOT NULL,
+  `descripcion` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `nombre` (`nombre`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+
+CREATE TABLE `usuarios` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `fecha_creacion` timestamp NOT NULL DEFAULT current_timestamp(),
+  `rol_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`),
+  KEY `fk_rol` (`rol_id`),
+  CONSTRAINT `fk_rol` FOREIGN KEY (`rol_id`) REFERENCES `roles` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+CREATE TABLE preferencias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    usuario_id INT NOT NULL,
+
+    hecho_clima_id INT NOT NULL,
+    hecho_ocasion_id INT NOT NULL,
+    hecho_estilo_id INT NOT NULL,
+
+    falla_id INT NOT NULL,   -- la falla generada por la combinación
+
+    ponderacion DECIMAL(5,2) DEFAULT NULL,
+
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    FOREIGN KEY (hecho_clima_id) REFERENCES hechos(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    FOREIGN KEY (hecho_ocasion_id) REFERENCES hechos(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    FOREIGN KEY (hecho_estilo_id) REFERENCES hechos(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    FOREIGN KEY (falla_id) REFERENCES fallas(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    UNIQUE KEY unique_tripleta (usuario_id, hecho_clima_id, hecho_ocasion_id, hecho_estilo_id)
+);

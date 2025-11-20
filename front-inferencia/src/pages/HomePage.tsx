@@ -22,6 +22,7 @@ import EventIcon from '@mui/icons-material/Event';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CheckroomIcon from '@mui/icons-material/Checkroom';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import HistoryIcon from '@mui/icons-material/History';
 
 // Tipos
 interface Usuario {
@@ -515,7 +516,7 @@ const HomePage: React.FC = () => {
               ))}
             </Box>
 
-            {/* Botón principal */}
+            {/* Botones principales */}
             <Button
               variant="contained"
               size="large"
@@ -532,6 +533,7 @@ const HomePage: React.FC = () => {
                 textTransform: 'none',
                 boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
                 transition: 'all 0.3s',
+                mb: 2,
                 '&:hover': {
                   background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
                   boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
@@ -540,6 +542,29 @@ const HomePage: React.FC = () => {
               }}
             >
               Iniciar Consulta Ahora
+            </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              fullWidth
+              startIcon={<HistoryIcon />}
+              onClick={() => navigate('/historial')}
+              sx={{
+                borderColor: '#667eea',
+                color: '#667eea',
+                fontWeight: 600,
+                py: 1.5,
+                fontSize: 14,
+                borderRadius: 2,
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: '#764ba2',
+                  backgroundColor: 'rgba(102, 126, 234, 0.08)',
+                  transform: 'translateY(-1px)',
+                }
+              }}
+            >
+              Ver Mi Historial
             </Button>
           </Box>
         </Card>

@@ -3,6 +3,7 @@ import App from "../App";
 import Login from "../auth/Login";
 import Search from "../inference/Search";
 import { Admin } from "../inference/Admin";
+import HistorialPreferencias from "../pages/HistorialPreferencias";
 
 export const MainRoutes: RouteObject[] = [
   {
@@ -13,6 +14,7 @@ export const MainRoutes: RouteObject[] = [
       { path: "login", element: <Login /> },
       { path: "search", element: <Search /> },
       { path: "admin", element: <Admin /> },
+      { path: "historial", element: <HistorialPreferencias /> },
     ],
   },
 ];

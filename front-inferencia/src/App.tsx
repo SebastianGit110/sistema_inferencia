@@ -7,6 +7,7 @@ import RegisterPage from "./pages/RegisterPage";
 import HomePage from "./pages/HomePage";
 import { Admin } from "./components/Admin";
 import Search from "./components/Search";
+import HistorialPreferencias from "./pages/HistorialPreferencias";
 
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -34,6 +35,14 @@ const AppRoutes: React.FC = () => {
       <Route 
         path="/admin" 
         element={ <Admin />} 
+      />
+      <Route 
+        path="/historial" 
+        element={
+          <ProtectedRoute>
+            <HistorialPreferencias />
+          </ProtectedRoute>
+        } 
       />
       <Route 
         path="/login" 

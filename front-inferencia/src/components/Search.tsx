@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getFallas, getHechos, getHechosFallas, createHecho } from "../api/index";
+import { getFallas, getHechos, getHechosFallas, createHecho, createPreferencia, getPreferencias } from "../api/index";
 import {
   Box,
   Typography,
@@ -16,10 +16,11 @@ import {
   TextField,
   IconButton,
 } from "@mui/material";
-import { 
-  ExitToApp as ExitToAppIcon, 
+import {
+  ExitToApp as ExitToAppIcon,
   AccountCircle as AccountCircleIcon,
-  Add as AddIcon 
+  Add as AddIcon,
+  ArrowBack as ArrowBackIcon
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 
@@ -44,7 +45,7 @@ export default function Search() {
   const [selectedOccasion, setSelectedOccasion] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("");
 
-  const [recommendation, setRecommendation] = useState<string[]>([]);
+  const [recommendation, setRecommendation] = useState<Array<{ descripcion: string; id: number; ponderacion?: number }>>([]);
   const [recommendationCounter, setRecommendationCounter] = useState<
     Record<string, number>
   >({});
@@ -53,6 +54,13 @@ export default function Search() {
   const [fallas, setFallas] = useState<any[]>([]);
   const [hechosFallas, setHechosFallas] = useState<any[]>([]);
 
+  // Guardar los IDs de los hechos seleccionados para usarlos al guardar preferencias
+  const [currentHechosIds, setCurrentHechosIds] = useState<{
+    clima: number | null;
+    ocasion: number | null;
+    estilo: number | null;
+  }>({ clima: null, ocasion: null, estilo: null });
+
   // Estados para los modales
   const [openModal, setOpenModal] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<"clima" | "ocasión" | "estilo">("clima");
@@ -60,13 +68,44 @@ export default function Search() {
 
   console.log(recommendationCounter);
 
-  const selectRecommendation = (option: string) => {
-    console.log("LA OPCION ", option);
+  const selectRecommendation = async (falla: { descripcion: string; id: number; ponderacion?: number }) => {
+    console.log("LA OPCION ", falla.descripcion);
 
+    // Actualizar el contador
     setRecommendationCounter((prev) => ({
       ...prev,
-      [option]: (prev[option] || 0) + 1,
+      [falla.descripcion]: (prev[falla.descripcion] || 0) + 1,
     }));
+
+    // Validar que el usuario esté autenticado
+    if (!user?.id) {
+      alert("Debes estar autenticado para guardar preferencias");
+      setRecommendation([]);
+      return;
+    }
+
+    // Validar que tengamos los IDs de los hechos seleccionados
+    if (!currentHechosIds.clima || !currentHechosIds.ocasion || !currentHechosIds.estilo) {
+      console.error("No se encontraron los IDs de los hechos seleccionados");
+      setRecommendation([]);
+      return;
+    }
+
+    // Insertar preferencia en la base de datos
+    // El backend maneja: si no existe inserta con ponderacion=1, si existe incrementa en 1
+    try {
+      await createPreferencia({
+        usuario_id: Number(user.id),
+        hecho_clima_id: currentHechosIds.clima,
+        hecho_ocasion_id: currentHechosIds.ocasion,
+        hecho_estilo_id: currentHechosIds.estilo,
+        falla_id: falla.id,
+      });
+      console.log("Preferencia guardada exitosamente");
+    } catch (error) {
+      console.error("Error al guardar preferencia:", error);
+      alert("Error al guardar la preferencia");
+    }
 
     setRecommendation([]);
   };
@@ -119,7 +158,19 @@ export default function Search() {
   }, []);
 
   // 🔍 Función para inferir recomendación
-  const getRecommendation = () => {
+  const getRecommendation = async () => {
+    // Validar que el usuario esté autenticado
+    if (!user?.id) {
+      alert("Debes estar autenticado para obtener recomendaciones");
+      return;
+    }
+
+    // Validar que se hayan seleccionado todas las opciones
+    if (!selectedClimate || !selectedOccasion || !selectedStyle) {
+      alert("Por favor selecciona todas las opciones (Clima, Ocasión y Estilo)");
+      return;
+    }
+
     // 1️⃣ Obtener los hechos seleccionados
     const hechosUsuario = [
       { nombre: "clima", valor: selectedClimate },
@@ -129,14 +180,40 @@ export default function Search() {
 
     console.log("Hechos usuario:", hechosUsuario);
 
-    // 1️⃣ obtener los id de los hechos elegidos
-    const idsHechos = hechos
-      .filter((h) =>
-        hechosUsuario.some((u) => u.nombre === h.nombre && u.valor === h.valor)
-      )
-      .map((h) => h.id);
+    // 2️⃣ Obtener los IDs específicos de cada hecho seleccionado
+    const hechoClima = hechos.find(
+      (h) => h.nombre === "clima" && h.valor === selectedClimate
+    );
+    const hechoOcasion = hechos.find(
+      (h) => h.nombre === "ocasión" && h.valor === selectedOccasion
+    );
+    const hechoEstilo = hechos.find(
+      (h) => h.nombre === "estilo" && h.valor === selectedStyle
+    );
 
-    // 2️⃣ buscar una regla (falla) que esté asociada exactamente a esos 3 hechos
+    if (!hechoClima || !hechoOcasion || !hechoEstilo) {
+      alert("Error al obtener los hechos seleccionados");
+      return;
+    }
+
+    const hechoClimaId = hechoClima.id;
+    const hechoOcasionId = hechoOcasion.id;
+    const hechoEstiloId = hechoEstilo.id;
+
+    // Guardar los IDs de los hechos seleccionados para usarlos al guardar preferencias
+    setCurrentHechosIds({
+      clima: hechoClimaId,
+      ocasion: hechoOcasionId,
+      estilo: hechoEstiloId,
+    });
+
+    // 3️⃣ Obtener todos los IDs de hechos para buscar fallas
+    const idsHechos = [hechoClimaId, hechoOcasionId, hechoEstiloId];
+
+    console.log("IDS HECHOS", idsHechos);
+
+    // 4️⃣ Buscar reglas (fallas) que estén asociadas exactamente a esos 3 hechos
+    const fallasRecomendadas: any[] = [];
 
     for (const falla of fallas) {
       const hechosDeFalla = hechosFallas
@@ -145,9 +222,71 @@ export default function Search() {
 
       if (hechosDeFalla.every((id) => idsHechos.includes(id))) {
         console.log(falla.descripcion);
-
-        setRecommendation((prev) => [...prev, falla.descripcion]);
+        fallasRecomendadas.push(falla);
       }
+    }
+
+    // 5️⃣ Consultar preferencias del usuario para las fallas recomendadas
+    if (fallasRecomendadas.length > 0) {
+      try {
+        const fallaIds = fallasRecomendadas.map(f => f.id);
+        const preferencias = await getPreferencias(Number(user.id), fallaIds);
+        
+        // Si no hay preferencias, mostrar las recomendaciones sin ordenar
+        if (!preferencias || preferencias.length === 0) {
+          setRecommendation(
+            fallasRecomendadas.map(f => ({ 
+              descripcion: f.descripcion, 
+              id: f.id,
+              ponderacion: 0
+            }))
+          );
+          return;
+        }
+
+        // Crear un mapa de falla_id -> ponderacion para acceso rápido
+        const preferenciasMap = new Map<number, number>();
+        preferencias.forEach((pref: any) => {
+          preferenciasMap.set(pref.falla_id, pref.ponderacion);
+        });
+
+        // 6️⃣ Ordenar las fallas recomendadas:
+        // Primero las que tienen preferencias (ordenadas por mayor ponderación)
+        // Luego las que no tienen preferencias (sin ordenar entre ellas)
+        const fallasConPreferencias = fallasRecomendadas.filter(f => preferenciasMap.has(f.id));
+        const fallasSinPreferencias = fallasRecomendadas.filter(f => !preferenciasMap.has(f.id));
+
+        // Ordenar las que tienen preferencias por ponderación descendente
+        fallasConPreferencias.sort((a, b) => {
+          const ponderacionA = preferenciasMap.get(a.id) || 0;
+          const ponderacionB = preferenciasMap.get(b.id) || 0;
+          return ponderacionB - ponderacionA;
+        });
+
+        // Combinar: primero las con preferencias ordenadas, luego las sin preferencias (orden original)
+        const fallasOrdenadas = [...fallasConPreferencias, ...fallasSinPreferencias];
+
+        // 7️⃣ Actualizar el estado con las recomendaciones ordenadas
+        setRecommendation(
+          fallasOrdenadas.map(f => ({ 
+            descripcion: f.descripcion, 
+            id: f.id,
+            ponderacion: preferenciasMap.get(f.id) || 0
+          }))
+        );
+      } catch (error) {
+        console.error("Error al obtener preferencias:", error);
+        // Si hay error, mostrar las recomendaciones sin ordenar
+        setRecommendation(
+          fallasRecomendadas.map(f => ({ 
+            descripcion: f.descripcion, 
+            id: f.id,
+            ponderacion: 0
+          }))
+        );
+      }
+    } else {
+      setRecommendation([]);
     }
   };
 
@@ -174,7 +313,7 @@ export default function Search() {
     try {
       // Insertar en la base de datos
       await createHecho(currentCategory, newOptionName);
-      
+
       // Recargar los datos para mostrar la nueva opción
       const { data: hechosData } = await getHechos();
       setHechos(hechosData);
@@ -234,9 +373,9 @@ export default function Search() {
           {option.name}
         </Button>
       ))}
-      
+
       {/* Botón para agregar nueva opción */}
-      <IconButton
+      {/* <IconButton
         onClick={() => handleOpenModal(category)}
         sx={{
           m: 0.5,
@@ -248,7 +387,7 @@ export default function Search() {
         }}
       >
         <AddIcon />
-      </IconButton>
+      </IconButton> */}
     </Stack>
   );
 
@@ -273,7 +412,7 @@ export default function Search() {
             Sistema de Recomendación de Trajes
           </Typography>
 
-          {/* Usuario + botón a la derecha */}
+          {/* Usuario + botones a la derecha */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Chip
               icon={<AccountCircleIcon />}
@@ -282,6 +421,15 @@ export default function Search() {
               size="medium"
               sx={{ borderColor: primaryColor, color: primaryColor }}
             />
+
+            <Button
+              color="inherit"
+              onClick={() => navigate("/")}
+              startIcon={<ArrowBackIcon />}
+              sx={{ textTransform: "none", color: primaryColor }}
+            >
+              Volver
+            </Button>
 
             <Button
               color="inherit"
@@ -391,7 +539,7 @@ export default function Search() {
                       </Box>
                       <Box>
                         <Typography fontWeight="medium">Recomendación {index + 1}</Typography>
-                        <Typography color="#333">{elem}</Typography>
+                        <Typography color="#333">{elem.descripcion}</Typography>
                       </Box>
                     </Stack>
                   </Card>
@@ -455,8 +603,8 @@ export default function Search() {
           <Button onClick={handleCloseModal} sx={{ color: "#666" }}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleSaveNewOption} 
+          <Button
+            onClick={handleSaveNewOption}
             variant="contained"
             sx={{ bgcolor: primaryColor, "&:hover": { bgcolor: "#455a64" } }}
           >
