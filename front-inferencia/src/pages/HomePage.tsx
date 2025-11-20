@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -9,6 +9,8 @@ import {
   Container, Box, Typography,
   Grid, Card, CardContent, Button, AppBar, Toolbar,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Paper, Stack, Dialog, DialogTitle, DialogContent, DialogActions,
+  TextField,
+  CircularProgress,
 } from '@mui/material';
 
 // Iconos
@@ -22,6 +24,10 @@ import EventIcon from '@mui/icons-material/Event';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CheckroomIcon from '@mui/icons-material/Checkroom';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import HistoryIcon from '@mui/icons-material/History';
 
 // Tipos
@@ -45,6 +51,9 @@ interface AdminCounterCardProps {
   color: string;
   icon: React.ReactNode;
 }
+
+
+
 
 const AdminCounterCard: React.FC<AdminCounterCardProps> = ({ title, count, color, icon }) => (
   <Card
@@ -88,7 +97,20 @@ const HomePage: React.FC = () => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [reglas, setReglas] = useState<Reglas>({ clima: 0, ocasion: 0, estilo: 0 });
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
-  const [open, setOpen] = useState(false);
+  const [openUserModal, setOpenUserModal] = useState(false);
+  const [openCreateModal, setOpenCreateModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // ✅ Refs para formulario de creación
+  const nombreCreateRef = useRef<HTMLInputElement>(null);
+  const emailCreateRef = useRef<HTMLInputElement>(null);
+  const passwordCreateRef = useRef<HTMLInputElement>(null);
+
+  // ✅ Refs para formulario de edición
+  const nombreEditRef = useRef<HTMLInputElement>(null);
+  const emailEditRef = useRef<HTMLInputElement>(null);
 
   // === Cargar Usuarios ===
   const fetchUsuarios = async () => {
@@ -102,7 +124,7 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     fetchUsuarios();
-  }, []); // Carga inicial
+  }, []);
 
   // === Cargar Reglas ===
   useEffect(() => {
@@ -117,60 +139,150 @@ const HomePage: React.FC = () => {
     fetchReglas();
   }, []);
 
-  const handleOpen = (user: Usuario) => {
+  // Agrega dentro de HomePage
+const [editRole, setEditRole] = useState<string>(''); // NUEVO ESTADO PARA EL ROL
+
+useEffect(() => {
+  if (selectedUser) {
+    setEditRole(selectedUser.rol); // Inicializa con rol del usuario
+  }
+}, [selectedUser]);
+
+
+  // === Manejo de Modales ===
+  const handleOpenUserModal = (user: Usuario) => {
     setSelectedUser(user);
-    setOpen(true);
+    setOpenUserModal(true);
   };
 
-  const handleClose = () => setOpen(false);
+  const handleCloseUserModal = () => {
+    setOpenUserModal(false);
+    setSelectedUser(null);
+  };
+
+  const handleOpenCreateModal = () => {
+    setOpenCreateModal(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setOpenCreateModal(false);
+    if (nombreCreateRef.current) nombreCreateRef.current.value = '';
+    if (emailCreateRef.current) emailCreateRef.current.value = '';
+    if (passwordCreateRef.current) passwordCreateRef.current.value = '';
+  };
+
+  const handleOpenEditModal = (user: Usuario) => {
+    setSelectedUser(user);
+    setOpenEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setOpenEditModal(false);
+    setSelectedUser(null);
+    if (nombreEditRef.current) nombreEditRef.current.value = '';
+    if (emailEditRef.current) emailEditRef.current.value = '';
+  };
+
+  const handleOpenDeleteDialog = (user: Usuario) => {
+    setSelectedUser(user);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setOpenDeleteDialog(false);
+    setSelectedUser(null);
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  // 🛠️ ACTUALIZACIÓN CLAVE: Cambiar rol y actualizar el estado
-  const handleChangeRole = async (id: number, newRole: string) => {
+  // ✅ FUNCIÓN: Crear Usuario
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const newUserData = {
+      nombre: nombreCreateRef.current?.value || '',
+      email: emailCreateRef.current?.value || '',
+      password: passwordCreateRef.current?.value || '',
+    };
+
+    // Validaciones básicas
+    if (!newUserData.nombre || !newUserData.email || !newUserData.password) {
+      alert('⚠️ Todos los campos son obligatorios');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await axios.put(`http://localhost:3000/api/users/${id}/rol`, { rol: newRole });
-      
-      // 1. Actualizar el rol en la lista local de usuarios (sin recargar)
-      setUsuarios((prev) =>
-        prev.map((u) =>
-          u.id === id ? { ...u, rol: newRole } : u
-        )
-      );
-
-      // 2. Actualizar el usuario seleccionado en el modal (si está abierto)
-      if (selectedUser && selectedUser.id === id) {
-          setSelectedUser(prev => ({ ...prev!, rol: newRole }));
-      }
-
-    } catch (error) {
-      console.error('Error al cambiar rol:', error);
-      // Opcional: Mostrar un mensaje de error al usuario
+      const response = await axios.post('http://localhost:3000/api/users', newUserData);
+      setUsuarios((prev) => [...prev, response.data]);
+      alert('✅ Usuario creado exitosamente!');
+      handleCloseCreateModal();
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || 'Error desconocido al crear usuario.';
+      alert(`❌ Error: ${errorMessage}`);
+      console.error('Error al crear usuario:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 🛠️ ACTUALIZACIÓN CLAVE: Eliminar usuario y actualizar el estado
-  const handleDeleteUser = async (id?: number) => {
-    if (!id) return;
-    // La confirmación debe estar fuera del bloque try/catch para un flujo lógico
-    if (!window.confirm('¿Seguro que deseas eliminar este usuario?')) return; 
+  // ✅ FUNCIÓN: Actualizar Usuario (sin contraseña)
+  const handleUpdateUser = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!selectedUser) return;
+
+  setLoading(true);
+
+  const updateData = {
+    nombre: nombreEditRef.current?.value || selectedUser.nombre,
+    email: emailEditRef.current?.value || selectedUser.email,
+    rol: editRole, // <-- ahora se envía el rol seleccionado en el modal
+  };
+
+  try {
+    const response = await axios.put(`http://localhost:3000/api/users/${selectedUser.id}`, updateData);
+
+    // Actualizar lista local
+    setUsuarios((prev) =>
+      prev.map((u) => (u.id === selectedUser.id ? response.data : u))
+    );
+
+    alert('✅ Usuario actualizado correctamente!');
+    handleCloseEditModal();
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.error || 'Error desconocido al actualizar usuario.';
+    alert(`❌ Error: ${errorMessage}`);
+    console.error('Error al actualizar usuario:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // 🛠️ FUNCIÓN: Eliminar usuario (confirmado)
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+
+    setLoading(true);
 
     try {
-      await axios.delete(`http://localhost:3000/api/users/${id}`);
-      
-      // 1. Eliminar el usuario de la lista local de usuarios
-      setUsuarios((prev) => prev.filter((u) => u.id !== id));
-      
-      // 2. Cerrar el modal después de la eliminación exitosa
-      setOpen(false);
-      setSelectedUser(null); // Limpiar el usuario seleccionado
+      await axios.delete(`http://localhost:3000/api/users/${selectedUser.id}`);
 
-    } catch (error) {
+      // Eliminar de la lista local
+      setUsuarios((prev) => prev.filter((u) => u.id !== selectedUser.id));
+
+      alert(`✅ Usuario "${selectedUser.nombre}" eliminado correctamente.`);
+      handleCloseDeleteDialog();
+      handleCloseUserModal();
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || 'Error al eliminar usuario.';
+      alert(`❌ Error: ${errorMessage}`);
       console.error('Error al eliminar usuario:', error);
-      // Opcional: Mostrar un mensaje de error al usuario
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -219,6 +331,21 @@ const HomePage: React.FC = () => {
             <Typography variant="h6" fontWeight="bold">
               Gestión de Usuarios
             </Typography>
+            {/* ✅ BOTÓN AGREGAR USUARIO */}
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddCircleOutlineIcon />}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleOpenCreateModal();
+              }}
+              sx={{ textTransform: 'none' }}
+            >
+              Agregar Usuario
+            </Button>
           </Box>
 
           <TableContainer component={Box}>
@@ -258,14 +385,35 @@ const HomePage: React.FC = () => {
                     </TableCell>
                     <TableCell>{u.fecha_creacion}</TableCell>
                     <TableCell>
-                      <Button
-                        size="small"
-                        variant="text"
-                        color="primary"
-                        onClick={() => handleOpen(u)} 
-                      >
-                        Ver detalles
-                      </Button>
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<VisibilityIcon />}
+                          onClick={() => handleOpenUserModal(u)}
+                        >
+                          Ver
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="secondary"
+                          startIcon={<EditIcon />}
+                          onClick={() => handleOpenEditModal(u)}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => handleOpenDeleteDialog(u)}
+                        >
+                          Eliminar
+                        </Button>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -329,89 +477,267 @@ const HomePage: React.FC = () => {
         </Card>
       </Grid>
 
-      {/* 🔹 Modal ÚNICO: Detalles y acciones del usuario */}
-      <Dialog open={open} onClose={handleClose} fullWidth>
-        <DialogTitle>Detalles del Usuario</DialogTitle>
-        <DialogContent dividers>
+      {/* 🔹 MODAL 1: Ver Detalles del Usuario (SOLO LECTURA) */}
+      <Dialog
+        open={openUserModal}
+        onClose={handleCloseUserModal}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
+          👤 Detalles del Usuario
+        </DialogTitle>
+        <DialogContent dividers sx={{ mt: 2 }}>
+          {selectedUser && (
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="caption" color="text.secondary">ID</Typography>
+                <Typography variant="body1" fontWeight="medium">{selectedUser.id}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">Nombre</Typography>
+                <Typography variant="body1" fontWeight="medium">{selectedUser.nombre}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">Email</Typography>
+                <Typography variant="body1" fontWeight="medium">{selectedUser.email}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">Rol</Typography>
+                <Chip
+                  label={selectedUser.rol}
+                  color={selectedUser.rol === 'admin' ? 'secondary' : 'default'}
+                  sx={{ mt: 0.5 }}
+                />
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">Fecha de Creación</Typography>
+                <Typography variant="body1" fontWeight="medium">{selectedUser.fecha_creacion}</Typography>
+              </Box>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseUserModal}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 🔹 MODAL 2: Crear Nuevo Usuario */}
+      <Dialog
+        open={openCreateModal}
+        onClose={handleCloseCreateModal}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+          ➕ Crear Nuevo Usuario
+        </DialogTitle>
+        <Box component="form" onSubmit={handleCreateUser}>
+          <DialogContent dividers sx={{ mt: 2 }}>
+            <Stack spacing={3}>
+              <TextField
+                required
+                label="Nombre Completo"
+                name="nombre"
+                fullWidth
+                inputRef={nombreCreateRef}
+                defaultValue=""
+                autoComplete="off"
+                placeholder="Ej: Juan Pérez"
+              />
+              <TextField
+                required
+                label="Correo Electrónico"
+                name="email"
+                type="email"
+                fullWidth
+                inputRef={emailCreateRef}
+                defaultValue=""
+                autoComplete="off"
+                placeholder="Ej: juan@example.com"
+              />
+              <TextField
+                required
+                label="Contraseña"
+                name="password"
+                type="password"
+                fullWidth
+                inputRef={passwordCreateRef}
+                defaultValue=""
+                autoComplete="new-password"
+                placeholder="Mínimo 6 caracteres"
+                helperText="La contraseña debe tener al menos 6 caracteres"
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ p: 2, gap: 1 }}>
+            <Button
+              onClick={handleCloseCreateModal}
+              disabled={loading}
+              variant="outlined"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              color="success"
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <AddCircleOutlineIcon />}
+            >
+              {loading ? 'Creando...' : 'Crear Usuario'}
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
+      {/* 🔹 MODAL 3: Editar Usuario (CON CAMBIO DE ROL) */}
+      <Dialog
+        open={openEditModal}
+        onClose={handleCloseEditModal}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ bgcolor: 'warning.main', color: 'white' }}>
+          ✏️ Editar Usuario
+        </DialogTitle>
+        <Box component="form" onSubmit={handleUpdateUser}>
+          <DialogContent dividers sx={{ mt: 2 }}>
+            {selectedUser && (
+              <Stack spacing={3}>
+                <TextField
+                  label="Nombre Completo"
+                  name="nombre"
+                  fullWidth
+                  inputRef={nombreEditRef}
+                  defaultValue={selectedUser.nombre}
+                  autoComplete="off"
+                />
+                <TextField
+                  label="Correo Electrónico"
+                  name="email"
+                  type="email"
+                  fullWidth
+                  inputRef={emailEditRef}
+                  defaultValue={selectedUser.email}
+                  autoComplete="off"
+                />
+
+                {/* Cambiar Rol dentro del modal de edición */}
+                <Box sx={{ pt: 1 }}>
+                  <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+                    Rol del Usuario:
+                  </Typography>
+                  <Stack direction="row" spacing={2}>
+                    <Button
+                      variant={editRole === "admin" ? "contained" : "outlined"}
+                      color="secondary"
+                      onClick={() => setEditRole("admin")}
+                      fullWidth
+                    >
+                      Admin
+                    </Button>
+                    <Button
+                      variant={editRole === "usuario" ? "contained" : "outlined"}
+                      color="primary"
+                      onClick={() => setEditRole("usuario")}
+                      fullWidth
+                    >
+                      Usuario
+                    </Button>
+                  </Stack>
+                </Box>
+              </Stack>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 2, gap: 1 }}>
+            <Button
+              onClick={handleCloseEditModal}
+              disabled={loading}
+              variant="outlined"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              color="warning"
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+            >
+              {loading ? 'Actualizando...' : 'Guardar Cambios'}
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
+
+      {/* 🔹 MODAL 4: Confirmar Eliminación */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={handleCloseDeleteDialog}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
+          ⚠️ Confirmar Eliminación
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
           {selectedUser && (
             <Box>
-              <Typography>
-                <strong>ID:</strong> {selectedUser.id}
+              <Typography variant="body1" gutterBottom>
+                ¿Estás seguro de que deseas eliminar al usuario?
               </Typography>
-              <Typography>
-                <strong>Nombre:</strong> {selectedUser.nombre}
-              </Typography>
-              <Typography>
-                <strong>Email:</strong> {selectedUser.email}
-              </Typography>
-              <Typography>
-                <strong>Rol actual:</strong> {selectedUser.rol}
-              </Typography>
-              <Typography>
-                <strong>Fecha de creación:</strong>{" "}
-                {selectedUser.fecha_creacion}
-              </Typography>
-
-              {/* Acciones */}
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="subtitle1" fontWeight="bold">
-                  Cambiar Rol:
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Nombre:
                 </Typography>
-                <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
-                  <Button
-                    variant={
-                      selectedUser.rol === "admin" ? "contained" : "outlined"
-                    }
-                    color="secondary"
-                    onClick={() =>
-                      handleChangeRole(selectedUser.id, "admin")
-                    }
-                    disabled={selectedUser.rol === "admin"} // Deshabilita si ya es admin
-                  >
-                    Admin
-                  </Button>
-                  <Button
-                    variant={
-                      selectedUser.rol === "usuario" ? "contained" : "outlined"
-                    }
-                    color="primary"
-                    onClick={() =>
-                      handleChangeRole(selectedUser.id, "usuario")
-                    }
-                    disabled={selectedUser.rol === "usuario"} // Deshabilita si ya es usuario
-                  >
-                    Usuario
-                  </Button>
-                </Stack>
+                <Typography variant="body1" fontWeight="bold">
+                  {selectedUser.nombre}
+                </Typography>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
+                  Email:
+                </Typography>
+                <Typography variant="body1" fontWeight="bold">
+                  {selectedUser.email}
+                </Typography>
               </Box>
+              <Typography variant="body2" color="error" sx={{ mt: 2, fontWeight: 'medium' }}>
+                ⚠️ Esta acción no se puede deshacer
+              </Typography>
             </Box>
           )}
         </DialogContent>
-
-        <DialogActions>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button
-            color="error"
-            onClick={() => handleDeleteUser(selectedUser?.id)}
+            onClick={handleCloseDeleteDialog}
+            disabled={loading}
+            variant="outlined"
           >
-            Eliminar Usuario
+            Cancelar
           </Button>
-          <Button onClick={handleClose}>Cerrar</Button>
+          <Button
+            onClick={handleDeleteUser}
+            variant="contained"
+            color="error"
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+          >
+            {loading ? 'Eliminando...' : 'Sí, Eliminar'}
+          </Button>
         </DialogActions>
       </Dialog>
+
     </Box>
   );
 
   const UserPanel = () => {
-    // ... (El código de UserPanel permanece igual)
-    const navigate = useNavigate();
-
-    // Componente auxiliar para las características de la columna izquierda (FeatureItem)
     const FeatureItem = ({ icon: Icon, title, description }: any) => (
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
         <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48, mt: 0.5 }}>
           <Icon sx={{ color: 'white' }} />
         </Avatar>
-        <Box sx={{ color: 'white' }}> {/* Asegura que el texto sea blanco */}
+        <Box sx={{ color: 'white' }}>
           <Typography variant="subtitle1" fontWeight={600}>
             {title}
           </Typography>
@@ -422,7 +748,6 @@ const HomePage: React.FC = () => {
       </Box>
     );
 
-    // Componente auxiliar para la tarjeta de consulta (ConsultCard)
     const ConsultCardContent = () => {
       const steps = [
         { step: '1', title: 'Selecciona la ocasión', desc: 'Casual, formal, deportiva o de gala' },
@@ -451,7 +776,6 @@ const HomePage: React.FC = () => {
             }
           }}
         >
-          {/* Fondo decorativo */}
           <Box
             sx={{
               position: 'absolute',
@@ -466,7 +790,6 @@ const HomePage: React.FC = () => {
           />
 
           <Box sx={{ position: 'relative', zIndex: 1 }}>
-            {/* Icono principal */}
             <Box
               sx={{
                 width: 80,
@@ -491,7 +814,6 @@ const HomePage: React.FC = () => {
               En solo 3 pasos obtendrás una recomendación profesional:
             </Typography>
 
-            {/* Pasos */}
             <Box sx={{ mb: 4 }}>
               {steps.map(({ step, title, desc }) => (
                 <Box key={step} sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
@@ -580,25 +902,22 @@ const HomePage: React.FC = () => {
           alignItems: 'center',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           px: 2,
-          py: { xs: 6, md: 4 }, // Ajuste de padding vertical para móviles
+          py: { xs: 6, md: 4 },
         }}
       >
         <Container maxWidth="lg">
-          {/* Usamos Box con Flexbox para simular el Grid de 2 columnas */}
           <Box
             sx={{
               display: 'flex',
-              flexDirection: { xs: 'column', md: 'row' }, // Columna en móvil, fila en escritorio
-              gap: { xs: 5, md: 8 }, // Espacio entre las secciones
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: { xs: 5, md: 8 },
               alignItems: 'center',
             }}
           >
-
-            {/* Columna izquierda - Información */}
             <Box
               sx={{
                 color: 'white',
-                flex: 1, // Ocupa la mitad del espacio disponible
+                flex: 1,
                 minWidth: 0,
                 pr: { md: 4 }
               }}
@@ -641,7 +960,6 @@ const HomePage: React.FC = () => {
                 para ofrecerte recomendaciones precisas y personalizadas.
               </Typography>
 
-              {/* Características destacadas - Usando Stack y el componente auxiliar */}
               <Stack spacing={2.5}>
                 <FeatureItem
                   icon={CheckCircleIcon}
@@ -661,12 +979,11 @@ const HomePage: React.FC = () => {
               </Stack>
             </Box>
 
-            {/* Columna derecha - Panel de consulta */}
             <Box
               sx={{
-                flex: 1, // Ocupa la otra mitad del espacio disponible
+                flex: 1,
                 display: 'flex',
-                justifyContent: 'flex-end', // Alinea la tarjeta a la derecha si hay espacio
+                justifyContent: 'flex-end',
                 width: { xs: '100%', md: 'auto' }
               }}
             >
@@ -678,8 +995,7 @@ const HomePage: React.FC = () => {
       </Box>
     );
   };
-  
-  // ... (Resto del componente)
+
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
@@ -687,7 +1003,7 @@ const HomePage: React.FC = () => {
         <Toolbar>
           <AdminPanelSettingsIcon sx={{ color: 'red', mr: 1, fontSize: 30 }} />
           <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            Panel de Administración
+            Panel de {isAdmin ? 'Administración' : 'Usuario'}
           </Typography>
 
           <Chip
